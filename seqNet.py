@@ -34,11 +34,8 @@ class cosine_seqNet(nn.Module):
         self.conv = nn.Conv1d(inDims, outDims, kernel_size=self.w)
 
     def forward(self, x):
-        # print(type(x))
-        # print("shape for cosine before squeeze: ", x.shape)
         # print("shape for cosine: ", x.shape) #[24, 5, 4096]
         cosine_sim_x = x[0]
-      #  print("x[0] before, ",x[0])
         #print("cosine_sim_x shape after slice: ",cosine_sim_x.shape)
         cosine_sim_x = self.cosine_sim(cosine_sim_x)
         x[0] = cosine_sim_x
@@ -46,11 +43,9 @@ class cosine_seqNet(nn.Module):
         
         if len(x.shape) < 3:
             x = x.unsqueeze(1)
-    
-        # print("x after cosine and permute",x.shape)
-        # print("x input shape: ", x.shape)
-        # print("x before permute: ",x.shape)
+
         x = x.permute(0,2,1) 
+        # print("x before conv: ",x.shape)
         x = self.conv(x)
         
         x = torch.mean(x,-1)
@@ -65,8 +60,6 @@ class cosine_seqNet(nn.Module):
         
         weighted_seq = []
         central_frame = sequence[(num_frames // 2) + 1].unsqueeze(0) #get central frame
-        # print("central_frame shape: ", central_frame.shape)
-        # print("central idx: ", (num_frames // 2) + 1)
 
         for j in range(num_frames):
            # print("cosine sim score: ", F.cosine_similarity(sequence[j].unsqueeze(0), central_frame))
@@ -88,7 +81,6 @@ class cosine_seqNet(nn.Module):
             weighted_seq.append(sequence[i] * weights[i])
 
       #  print(weighted_seq)
-
         # multiply each frame in the sequence by its weight
 
         return torch.stack(weighted_seq)
