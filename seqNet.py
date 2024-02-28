@@ -106,9 +106,9 @@ class al_seqNet(nn.Module):
         al_x = x[0]
         #print("cosine_sim_x shape after slice: ",cosine_sim_x.shape)
         al_x = self.self_attention_layer(al_x)
-        x[:] = al_x.unsqueeze(0).expand_as(x) # shape: [24,10,4096]
+        x = al_x.unsqueeze(0).expand_as(x).clone() # shape: [24,10,4096] clone to avoid gradient computing error
         x = x.permute(0,2,1) # shape: [24,4096,10]
-        x = torch.mean(x,-1)
+        x = torch.sum(x, -1)
         # print("x_al shape",x.shape)
 
         return x
