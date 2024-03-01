@@ -38,10 +38,11 @@ class cosine_seqNet(nn.Module):
             x = x.unsqueeze(1)
 
         # print("shape for cosine: ", x.shape) #[24, 5, 4096]
-        cosine_sim_x = x[0]
-        #print("cosine_sim_x shape after slice: ",cosine_sim_x.shape)
-        cosine_sim_x = self.cosine_sim(cosine_sim_x)
-        x[:] = cosine_sim_x.unsqueeze(0).expand_as(x) 
+        for idx in range(len(x)):
+            cosine_sim_x = x[idx]
+            #print("cosine_sim_x shape after slice: ",cosine_sim_x.shape)
+            cosine_sim_x = self.cosine_sim(cosine_sim_x)
+            x[idx] = cosine_sim_x
         # print("x[0] after, ",x[0])
     
         x = x.permute(0,2,1) 
