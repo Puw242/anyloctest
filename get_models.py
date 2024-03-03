@@ -37,6 +37,9 @@ def get_model(opt,encoder_dim,device):
     elif opt.pooling.lower() == 'al_seqnet':
         seqFt = seqNet.al_seqNet(encoder_dim, opt.outDims, opt.seqL, opt.w)
         model.add_module('pool', nn.Sequential(*[seqFt, Flatten(), L2Norm()]))
+    elif opt.pooling.lower() == 'cosine_al_seqnet':
+        seqFt = seqNet.cosine_al_seqNet(encoder_dim, opt.outDims, opt.seqL, opt.w)
+        model.add_module('pool', nn.Sequential(*[seqFt, Flatten(), L2Norm()]))
     elif opt.pooling.lower() == 's1+seqmatch':
         seqFt = seqNet.seqNet(encoder_dim, opt.outDims, 1, opt.w)
         model.add_module('pool', nn.Sequential(*[seqFt, Flatten(), L2Norm()]))
@@ -47,7 +50,6 @@ def get_model(opt,encoder_dim,device):
         single = nn.AdaptiveAvgPool2d((opt.seqL,None)) # shoud have no effect
         model.add_module('pool', nn.Sequential(*[single, Flatten(), L2Norm()]))
     elif opt.pooling.lower() == 'single+seqmatch':
-
         model.add_module('pool', nn.Sequential(*[L2Norm(dim=-1)]))
     else:
         raise ValueError('Unknown pooling type: ' + opt.pooling)

@@ -41,7 +41,7 @@ class cosine_seqNet(nn.Module):
         for idx in range(len(x)):
             cosine_sim_x = x[idx]
             #print("cosine_sim_x shape after slice: ",cosine_sim_x.shape)
-            cosine_sim_x = self.cosine_sim(cosine_sim_x)
+            cosine_sim_x = cosine_sim(cosine_sim_x)
             x[idx] = cosine_sim_x
         # print("x[0] after, ",x[0])
     
@@ -53,38 +53,6 @@ class cosine_seqNet(nn.Module):
         # print("after and mean conv: ",x.shape)
         return x
 
-    def cosine_sim(self,sequence):
-        # print("sequence type: ", type(sequence))
-        num_frames = len(sequence)
-        weights = []
-        normalized_weights = np.zeros(num_frames)
-        
-        weighted_seq = []
-        central_frame = sequence[(num_frames // 2) + 1].unsqueeze(0) #get central frame
-
-        for j in range(num_frames):
-           # print("cosine sim score: ", F.cosine_similarity(sequence[j].unsqueeze(0), central_frame))
-            weight = F.cosine_similarity(sequence[j].unsqueeze(0), central_frame)
-            weights.append(weight.item())
-            
-
-        #print("weights: ",weights)
-        total_sum = sum(weights)
-        #print("sum weights: ",total_sum)
-
-        for z in range(num_frames):
-            normalized_weights[z] = weights[z]/total_sum
-        
-       # print("normalized_weights: ",normalized_weights)
-        
-        for i in range(num_frames):
-           # print("cosine sim score: ", F.cosine_similarity(sequence[j].unsqueeze(0), central_frame))
-            weighted_seq.append(sequence[i] * weights[i])
-
-      #  print(weighted_seq)
-        # multiply each frame in the sequence by its weight
-
-        return torch.stack(weighted_seq)
 
 
 # Attention Layer Seqnet
@@ -106,15 +74,48 @@ class al_seqNet(nn.Module):
 
         for idx in range(len(x)):
             al_x = x[idx]
-            #print("cosine_sim_x shape after slice: ",cosine_sim_x.shape)
             al_x = self.self_attention_layer(al_x)
             x[idx] = al_x
 
         x = x.permute(0,2,1) # shape: [24,4096,10]
-        x = torch.mean(x, -1)
-        # print("x_al shape",x.shape)
+        mean_pool = nn.AdaptiveAvgPool1d(1)
+        x = mean_pool(x)
+        x = x.squeeze(-1)
+        return x
+
+
+class cosine_al_seqNet(nn.Module):
+    def __init__(self, inDims, outDims, seqL, w=5):
+
+        super(cosine_al_seqNet, self).__init__()
+        self.inDims = inDims
+        self.self_attention_layer = SelfAttentionLayer(4096)
+        self.w = w
+        self.conv = nn.Conv1d(inDims, outDims, kernel_size=self.w)
+
+    def forward(self, x):
+        if len(x.shape) < 3:
+            x = x.unsqueeze(1)
+
+        # print("shape for cosine: ", x.shape) #[24, 10, 4096]
+        for idx in range(len(x)):
+            cosine_sim_x = x[idx]
+            cosine_sim_x = cosine_sim(cosine_sim_x)
+            x[idx] = cosine_sim_x
+
+        for idx in range(len(x)):
+            al_x = x[idx]
+            al_x = self.self_attention_layer(al_x)
+            x[idx] = al_x
+
+        
+        x = x.permute(0,2,1) #[24, 4096, 10]
+        mean_pool = nn.AdaptiveAvgPool1d(1)
+        x = mean_pool(x)
+        x = x.squeeze(-1)
 
         return x
+
 
 class SelfAttentionLayer(nn.Module):
     def __init__(self, input_dim):
@@ -128,15 +129,36 @@ class SelfAttentionLayer(nn.Module):
         key = self.key_linear(sequence)
         value = self.value_linear(sequence)
         
-#         print("before attention_scores: ",tensor_memory_usage_in_MB(sequence))
         attention_scores = torch.matmul(query, key.transpose(-2, -1))
-#         print("attention_scores: ",tensor_memory_usage_in_MB(attention_scores))
         attention_weights = torch.softmax(attention_scores, dim=-1) #potentially not use softmax maybe we use something like first order norm instead
-#         print("attention weights: ",tensor_memory_usage_in_MB(attention_weights))
         attended_sequence = torch.matmul(attention_weights, value)
-#         print("attended_sequence: ",tensor_memory_usage_in_MB(attended_sequence))
-        # print("attended_sequence shape: ",attended_sequence.shape)
         return attended_sequence
+
+
+def cosine_sim(sequence):
+    # print("sequence type: ", type(sequence))
+    num_frames = len(sequence)
+    weights = []
+    normalized_weights = np.zeros(num_frames)
+    
+    weighted_seq = []
+    central_frame = sequence[(num_frames // 2) + 1].unsqueeze(0) #get central frame
+
+    for j in range(num_frames):
+        # print("cosine sim score: ", F.cosine_similarity(sequence[j].unsqueeze(0), central_frame))
+        weight = F.cosine_similarity(sequence[j].unsqueeze(0), central_frame)
+        weights.append(weight.item())
+        
+    total_sum = sum(weights)
+
+    for z in range(num_frames):
+        normalized_weights[z] = weights[z]/total_sum
+
+    
+    for i in range(num_frames):
+        weighted_seq.append(sequence[i] * weights[i])
+
+    return torch.stack(weighted_seq)
 
     
 class Delta(nn.Module):

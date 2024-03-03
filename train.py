@@ -59,7 +59,6 @@ def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_
             input = torch.cat([query,positives,negatives]).float()
             input = input.to(device)
             seq_encoding = model.pool(input)
-
             seqQ, seqP, seqN = torch.split(seq_encoding, [B, B, nNeg])
 
             optimizer.zero_grad()
