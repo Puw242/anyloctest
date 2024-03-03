@@ -72,10 +72,15 @@ class al_seqNet(nn.Module):
 
         # print("x shape for AL: ",x.shape)
 
+        # Create a new tensor for storing output to avoid inplace modification.
+        output = torch.zeros_like(x)
         for idx in range(len(x)):
             al_x = x[idx]
             al_x = self.self_attention_layer(al_x)
-            x[idx] = al_x
+            output[idx] = al_x
+
+        x = output
+
 
         x = x.permute(0,2,1) # shape: [24,4096,10]
         mean_pool = nn.AdaptiveAvgPool1d(1)
@@ -103,10 +108,14 @@ class cosine_al_seqNet(nn.Module):
             cosine_sim_x = cosine_sim(cosine_sim_x)
             x[idx] = cosine_sim_x
 
+        # Create a new tensor for storing output to avoid inplace modification.
+        output = torch.zeros_like(x)
         for idx in range(len(x)):
             al_x = x[idx]
             al_x = self.self_attention_layer(al_x)
-            x[idx] = al_x
+            output[idx] = al_x
+
+        x = output
 
         
         x = x.permute(0,2,1) #[24, 4096, 10]

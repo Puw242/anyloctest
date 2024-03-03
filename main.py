@@ -124,7 +124,7 @@ if __name__ == "__main__":
     print('===> Building model')
     model, optimizer, scheduler, criterion = get_model(opt, encoder_dim, device)
 
-    unique_string = datetime.now().strftime('%b%d_%H-%M-%S')+'_l'+str(opt.seqL)+'_'+ opt.expName
+    unique_string = opt.pooling+"_"+datetime.now().strftime('%b%d_%H-%M-%S')+'_l'+str(opt.seqL)+'_'+ opt.expName
     writer = None
 
     if opt.mode.lower() == 'test':
