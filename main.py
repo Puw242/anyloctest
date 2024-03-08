@@ -37,6 +37,7 @@ parser.add_argument('--nocuda', action='store_true', help='Dont use cuda')
 parser.add_argument('--threads', type=int, default=8, help='Number of threads for each data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='Random seed to use.')
 parser.add_argument('--expName', default='0', help='Unique string for an experiment')
+parser.add_argument('--skip', default='1', help='sampling skip rate')
 
 # path settings
 parser.add_argument('--runsPath', type=str, default=join(prefix_data,'runs'), help='Path to save runs to.')

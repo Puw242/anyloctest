@@ -9,6 +9,7 @@ prefix_data = "./data/"
 def get_dataset(opt):
 
     if 'nordland' in opt.dataset.lower():
+        print("Here")
         dataset = Dataset('nordland', 'nordland_train_d-40_d2-10.db', 'nordland_test_d-1_d2-1.db', 'nordland_val_d-1_d2-1.db', opt)  # train, test, val structs
         if 'sw' in opt.dataset.lower():
             ref, qry = 'summer', 'winter'
@@ -16,7 +17,14 @@ def get_dataset(opt):
             ref, qry = 'spring', 'fall'
         ft1 = np.load(join(prefix_data,"descData/{}/nordland-clean-{}.npy".format(opt.descType,ref)))
         ft2 = np.load(join(prefix_data,"descData/{}/nordland-clean-{}.npy".format(opt.descType,qry)))
-        trainInds, testInds, valInds = np.arange(15000), np.arange(15100,18100), np.arange(18200,21200)
+
+        skip_rate = int(opt.skip.lower())
+
+        
+        trainInds = np.arange(0, 15000, skip_rate)  
+        testInds = np.arange(15100, 18100, skip_rate) 
+        valInds = np.arange(18200, 21200, skip_rate) 
+
 
         dataset.trainInds = [trainInds, trainInds]
         dataset.valInds = [valInds, valInds]

@@ -11,7 +11,6 @@ from math import ceil
 def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_set, whole_train_set, whole_training_data_loader, epoch, writer):
     epoch_loss = 0
     startIter = 1 # keep track of batch iter across subsets for logging
-
     if opt.cacheRefreshRate > 0:
         subsetN = ceil(len(train_set) / opt.cacheRefreshRate)
         #TODO randomise the arange before splitting?
@@ -47,9 +46,12 @@ def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_
         print('Cached:', torch.cuda.memory_reserved())
 
         model.train()
+        print(indices)
         for iteration, (query, positives, negatives, 
                 negCounts, indices) in tqdm(enumerate(training_data_loader, startIter),total=len(training_data_loader),leave=False):
             loss = 0
+            print("hello")
+            print(indices)
             if query is None:
                 continue # in case we get an empty batch
 

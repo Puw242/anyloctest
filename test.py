@@ -32,8 +32,12 @@ def aggregateMatchScores(dbDesc,qDesc,device,refCandidates=None):
 def getRecallAtN(n_values, predictions, gt):
     correct_at_n = np.zeros(len(n_values))
     numQWithoutGt = 0
+    
+    # print("ground_truths: ",gt)
+
     #TODO can we do this on the matrix in one go?
     for qIx, pred in enumerate(predictions):
+        # print(qIx)
         if len(gt[qIx]) == 0:
             numQWithoutGt += 1
             continue
@@ -46,6 +50,7 @@ def getRecallAtN(n_values, predictions, gt):
 
 def test(opt, model, encoder_dim, device, eval_set, writer, epoch=0, extract_noEval=False):
     # TODO what if features dont fit in memory? 
+    # print("eval set len: ", len(eval_set))
     test_data_loader = DataLoader(dataset=eval_set, 
                 num_workers=opt.threads, batch_size=opt.cacheBatchSize, shuffle=False, 
                 pin_memory=not opt.nocuda)
@@ -62,6 +67,7 @@ def test(opt, model, encoder_dim, device, eval_set, writer, epoch=0, extract_noE
             dbFeat = torch.empty((len(eval_set), pool_size),device=device)
 
         durs_batch = []
+
         for iteration, (input, indices) in tqdm(enumerate(test_data_loader, 1),total=len(test_data_loader)-1, leave=False):
             t1 = time.time()
             input = input.float().to(device)
@@ -84,8 +90,11 @@ def test(opt, model, encoder_dim, device, eval_set, writer, epoch=0, extract_noE
     print("Average batch time:", np.mean(durs_batch), np.std(durs_batch))
 
     # extracted for both db and query, now split in own sets
-    qFeat = dbFeat[eval_set.dbStruct.numDb:]
-    dbFeat = dbFeat[:eval_set.dbStruct.numDb]
+    # print("eval_set.dbStruct.numDb: ",eval_set.dbStruct.numDb)
+
+    qFeat = dbFeat[eval_set.dbStruct.numDb // int(opt.skip.lower()):]
+    dbFeat = dbFeat[:eval_set.dbStruct.numDb // int(opt.skip.lower())]
+
     print(dbFeat.shape, qFeat.shape)
 
     qFeat_np = qFeat.detach().cpu().numpy().astype('float32')
@@ -131,11 +140,19 @@ def test(opt, model, encoder_dim, device, eval_set, writer, epoch=0, extract_noE
     # compute recall for different loc radii
     rAtL = []
     for locRad in [1,5,10,20,40,100,200]:
+        # print("Rad: ", locRad)
         gtAtL = gtDistsMat <= locRad
-        gtAtL = [np.argwhere(gtAtL[:,qIx]).flatten() for qIx in range(gtDistsMat.shape[1])]
-        rAtL.append(getRecallAtN(n_values, predictions, gtAtL))
-
+        gtAtL = [np.argwhere(gtAtL[:,qIx]).flatten() for qIx in range(gtDistsMat.shape[1] // int(opt.skip.lower()))] 
+        recall_val = getRecallAtN(n_values, predictions, gtAtL)
+        # if locRad == 1:
+        #     print("ground truth: ", gtAtL[500:505])
+        #     print("predictions: ",predictions[500:505]) #Fix prediction generations
+        #     print("recall values: ",recall_val)
+        rAtL.append(recall_val)
+        
+    gt = gt[:gtDistsMat.shape[1] // int(opt.skip.lower())]
     recall_at_n = getRecallAtN(n_values, predictions, gt)
+
 
     recalls = {} #make dict for output
     for i,n in enumerate(n_values):

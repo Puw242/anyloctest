@@ -64,6 +64,8 @@ class Dataset():
     def get_whole_test_set(self):
         if self.test_mat_file is not None:
             structFile = join(self.struct_dir, self.test_mat_file)
+            # print("testInds: ",self.testInds)
+            # print(len(self.testInds))
             indsSplit = self.testInds
             if self.seqL_filterData is None and self.dataset_name == 'msls':
                 self.seqL_filterData = self.seqL
