@@ -11,18 +11,27 @@ from math import ceil
 def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_set, whole_train_set, whole_training_data_loader, epoch, writer):
     epoch_loss = 0
     startIter = 1 # keep track of batch iter across subsets for logging
+
+    skip_rate = int(opt.skip.lower()) # Skip rate from options
+
     if opt.cacheRefreshRate > 0:
+        """
+        Check this!
+        """
         subsetN = ceil(len(train_set) / opt.cacheRefreshRate)
+        start_indices = np.arange(0, len(train_set), opt.cacheRefreshRate * skip_rate)
         #TODO randomise the arange before splitting?
-        subsetIdx = np.array_split(np.arange(len(train_set)), subsetN)
+        subsetIdx = [start_indices[i:i+1] for i in range(len(start_indices))]
     else:
         subsetN = 1
-        subsetIdx = [np.arange(len(train_set))]
+        subsetIdx = [np.arange(len(train_set)) * int(opt.skip.lower())]
 
     nBatches = (len(train_set) + opt.batchSize - 1) // opt.batchSize
 
     for subIter in range(subsetN):
+    
         print('====> Building Cache')
+
         model.eval()
         with h5py.File(train_set.cache, mode='w') as h5: 
             pool_size = encoder_dim
@@ -31,12 +40,18 @@ def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_
             h5feat = h5.create_dataset("features", [len(whole_train_set), pool_size], dtype=np.float32)
             with torch.no_grad():
                 for iteration, (input, indices) in tqdm(enumerate(whole_training_data_loader, 1),total=len(whole_training_data_loader)-1, leave=False):
+                    indices = indices * skip_rate
                     image_encoding = (input).float().to(device)
                     seq_encoding = model.pool(image_encoding)
-                    h5feat[indices.detach().numpy(), :] = seq_encoding.detach().cpu().numpy()
+                    h5feat[indices.detach().numpy() // skip_rate, :] = seq_encoding.detach().cpu().numpy() # Fix this line, adjusted to divide indices by the skip rate
                     del input, image_encoding, seq_encoding
 
-        sub_train_set = Subset(dataset=train_set, indices=subsetIdx[subIter])
+        subset_indices = np.array(subsetIdx[subIter])
+
+        adjusted_indices = subset_indices // skip_rate
+
+        sub_train_set = Subset(dataset=train_set, indices=adjusted_indices)
+
 
         training_data_loader = DataLoader(dataset=sub_train_set, num_workers=opt.threads, 
                     batch_size=opt.batchSize, shuffle=True, 
@@ -46,12 +61,10 @@ def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_
         print('Cached:', torch.cuda.memory_reserved())
 
         model.train()
-        print(indices)
         for iteration, (query, positives, negatives, 
                 negCounts, indices) in tqdm(enumerate(training_data_loader, startIter),total=len(training_data_loader),leave=False):
             loss = 0
-            print("hello")
-            print(indices)
+            
             if query is None:
                 continue # in case we get an empty batch
 

@@ -79,26 +79,26 @@ def get_dataset(opt):
 def get_splits(opt, dataset):
     whole_train_set, whole_training_data_loader, train_set, whole_test_set = None, None, None, None
     if opt.mode.lower() == 'train':
-        whole_train_set = dataset.get_whole_training_set()
+        whole_train_set = dataset.get_whole_training_set(opt=opt)
         whole_training_data_loader = DataLoader(dataset=whole_train_set,
                 num_workers=opt.threads, batch_size=opt.cacheBatchSize, shuffle=False,
                 pin_memory=not opt.nocuda)
 
-        train_set = dataset.get_training_query_set(opt.margin)
+        train_set = dataset.get_training_query_set(margin=opt.margin,opt=opt)
 
         print('====> Training whole set:', len(whole_train_set))
         print('====> Training query set:', len(train_set))
-        whole_test_set = dataset.get_whole_val_set()
+        whole_test_set = dataset.get_whole_val_set(opt=opt)
         print('===> Evaluating on val set, query count:', whole_test_set.dbStruct.numQ)
     elif opt.mode.lower() == 'test':
         if opt.split.lower() == 'test':
             whole_test_set = dataset.get_whole_test_set()
             print('===> Evaluating on test set')
         elif opt.split.lower() == 'train':
-            whole_test_set = dataset.get_whole_training_set()
+            whole_test_set = dataset.get_whole_training_set(opt=opt)
             print('===> Evaluating on train set')
         elif opt.split.lower() in ['val']:
-            whole_test_set = dataset.get_whole_val_set()
+            whole_test_set = dataset.get_whole_val_set(opt=opt)
             print('===> Evaluating on val set')
         else:
             raise ValueError('Unknown dataset split: ' + opt.split)

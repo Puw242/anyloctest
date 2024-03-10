@@ -49,17 +49,22 @@ class Dataset():
             self.q_seqBounds = seqBounds[1]
         return self.dbDescs.shape[1]
 
-    def get_whole_training_set(self, onlyDB=False):
+    def get_whole_training_set(self, opt,onlyDB=False):
         structFile = join(self.struct_dir, self.train_mat_file)
         indsSplit = self.trainInds
-        return WholeDatasetFromStruct( structFile, indsSplit, self.dbDescs, self.qDescs, seqL=self.seqL, onlyDB=onlyDB, seqBounds=[self.db_seqBounds,self.q_seqBounds],seqL_filterData=self.seqL_filterData)
+        return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
+        self.qDescs, seqL=self.seqL,onlyDB=onlyDB, 
+        seqBounds=[self.db_seqBounds,self.q_seqBounds],
+        seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
 
-    def get_whole_val_set(self):
+    def get_whole_val_set(self,opt):
         structFile = join(self.struct_dir, self.val_mat_file)
         indsSplit = self.valInds
         if self.seqL_filterData is None and self.dataset_name == 'msls':
             self.seqL_filterData = self.seqL
-        return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds],seqL_filterData=self.seqL_filterData)
+        return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
+        self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds],
+        seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
 
     def get_whole_test_set(self):
         if self.test_mat_file is not None:
@@ -69,19 +74,26 @@ class Dataset():
             indsSplit = self.testInds
             if self.seqL_filterData is None and self.dataset_name == 'msls':
                 self.seqL_filterData = self.seqL
-            return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds],seqL_filterData=self.seqL_filterData)
+            return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
+        self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds],
+        seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
+
         else:
             raise ValueError('test set not available for dataset ' + self.dataset_name)
 
-    def get_training_query_set(self, margin=0.1, nNegSample=1000, use_regions=False):
+    def get_training_query_set(self,opt, margin=0.1, nNegSample=1000, use_regions=False):
         structFile = join(self.struct_dir, self.train_mat_file)
         indsSplit = self.trainInds
-        return QueryDatasetFromStruct(structFile,indsSplit, self.dbDescs, self.qDescs, nNegSample=nNegSample, margin=margin,use_regions=use_regions, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds])
+        return QueryDatasetFromStruct(structFile,indsSplit, self.dbDescs,  
+        self.qDescs, nNegSample=nNegSample, margin=margin,use_regions=use_regions, seqL=self.seqL, 
+        seqBounds=[self.db_seqBounds,self.q_seqBounds], skip_rate = int(opt.skip.lower()))
 
     def get_val_query_set(self):
         structFile = join(self.struct_dir, self.val_mat_file)
         indsSplit = self.valInds
-        return QueryDatasetFromStruct(structFile, indsSplit, self.dbDescs, self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds])
+        return QueryDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
+        self.qDescs, seqL=self.seqL, 
+        seqBounds=[self.db_seqBounds,self.q_seqBounds],skip_rate = int(opt.skip.lower()))
 
     @staticmethod
     def collate_fn(batch):
@@ -206,11 +218,6 @@ def save_db_struct(path, db_struct):
         assert db_struct.numQ == len(db_struct.utmQ)
         inner_dict['utmDb'] = db_struct.utmDb.T
         inner_dict['utmQ'] = db_struct.utmQ.T
-
-    if db_struct.gpsDb is not None and db_struct.gpsQ is not None:
-        assert db_struct.numDb == len(db_struct.gpsDb)
-        assert db_struct.numQ == len(db_struct.gpsQ)
-        inner_dict['gpsDb'] = db_struct.gpsDb.T
         inner_dict['gpsQ'] = db_struct.gpsQ.T
 
     if db_struct.dbTimeStamp is not None and db_struct.qTimeStamp is not None:
@@ -223,9 +230,9 @@ def print_db_concise(db):
     [print('\033[1m' + k + '\033[0m', v[:10] if type(v) is list else v) for k,v in db._asdict().items()]
 
 class WholeDatasetFromStruct(data.Dataset):
-    def __init__(self, structFile, indsSplit, dbDescs, qDescs, onlyDB=False, seqL=1, seqBounds=None,seqL_filterData=None):
+    def __init__(self, structFile, indsSplit, dbDescs, qDescs, skip_rate, onlyDB=False, seqL=1, seqBounds=None,seqL_filterData=None):
         super().__init__()
-
+        self.skip_rate = skip_rate
         self.seqL = seqL
         self.filterBoundaryInds = False if seqL_filterData is None else True
 
@@ -234,8 +241,7 @@ class WholeDatasetFromStruct(data.Dataset):
         self.images = dbDescs[indsSplit[0]]
 
         if seqBounds[0] is None:
-            self.seqBounds = np.array([[0,len(self.images)] for _ in range(len(self.images))])
-
+            self.seqBounds = np.array([[0,len(self.images)] for _ in range(len(self.images))])                                                    
         if not onlyDB:
             qImages = qDescs[indsSplit[1]]
             self.images = np.concatenate([self.images,qImages],0)
@@ -248,9 +254,11 @@ class WholeDatasetFromStruct(data.Dataset):
             q_seqBounds = db_seqBounds[-1,-1] + seqBounds[1][indsSplit[1]]
             self.seqBounds = np.vstack([db_seqBounds,q_seqBounds])
 
-        self.validInds = np.arange(len(self.images))
-        self.validInds_db = np.arange(self.dbStruct.numDb)
-        self.validInds_q = np.arange(self.dbStruct.numQ)
+        self.validInds = np.arange(len(self.images)) // self.skip_rate
+        self.validInds_db = np.arange(self.dbStruct.numDb) // self.skip_rate
+        self.validInds_q = np.arange(self.dbStruct.numQ) // self.skip_rate
+
+
         if self.filterBoundaryInds:
             validFlags = getValidSeqInds(self.seqBounds,seqL_filterData)
             self.validInds = np.argwhere(validFlags).flatten()
@@ -292,10 +300,11 @@ class WholeDatasetFromStruct(data.Dataset):
 
 
 class QueryDatasetFromStruct(data.Dataset):
-    def __init__(self, structFile, indsSplit, dbDescs, qDescs, nNegSample=1000, nNeg=10, margin=0.1, use_regions=False, seqL=1, seqBounds=None):
+    def __init__(self, structFile, indsSplit, dbDescs, qDescs, skip_rate, nNegSample=1000, nNeg=10, margin=0.1, use_regions=False, seqL=1, seqBounds=None):
         super().__init__()
 
         self.seqL = seqL
+        self.skip_rate = skip_rate
 
         self.dbDescs = dbDescs[indsSplit[0]]
         self.qDescs = qDescs[indsSplit[1]]
@@ -327,6 +336,7 @@ class QueryDatasetFromStruct(data.Dataset):
             knn.radius_neighbors(self.dbStruct.utmQ, radius=self.dbStruct.nonTrivPosDistSqThr**0.5,
                                  return_distance=True)
 
+
         self.nontrivial_positives = list(self.nontrivial_positives)
 
         # radius returns unsorted, sort once now so we dont have to later
@@ -353,10 +363,12 @@ class QueryDatasetFromStruct(data.Dataset):
         self.negCache = [np.empty((0,)) for _ in range(self.dbStruct.numQ)]
 
     def __getitem__(self, index):
+        # print("index: ", index)
         with h5py.File(self.cache, mode='r') as h5:
             h5feat = h5.get("features")
 
-            qOffset = self.dbStruct.numDb
+            qOffset = self.dbStruct.numDb // self.skip_rate
+            # print("qOffset: ",qOffset)
             qFeat = h5feat[index + qOffset]
 
             posFeat = h5feat[self.nontrivial_positives[index].tolist()]
@@ -381,7 +393,9 @@ class QueryDatasetFromStruct(data.Dataset):
             negSample = np.random.choice(self.potential_negatives[index], self.nNegSample)
             negSample = np.unique(np.concatenate([self.negCache[index], negSample]))
             negSample = np.sort(negSample) #essential to order ascending, speeds up h5 by about double
-
+            negSample = negSample // self.skip_rate
+            negSample = np.unique(negSample)
+            # print("h5 negative: ",negSample.astype(int).tolist())
             negFeat = h5feat[negSample.astype(int).tolist()]
             if self.use_faiss:
                 faiss_index = faiss.IndexFlatL2(posFeat.shape[1])
