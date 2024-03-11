@@ -66,7 +66,7 @@ class Dataset():
         self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds],
         seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
 
-    def get_whole_test_set(self):
+    def get_whole_test_set(self,opt):
         if self.test_mat_file is not None:
             structFile = join(self.struct_dir, self.test_mat_file)
             # print("testInds: ",self.testInds)

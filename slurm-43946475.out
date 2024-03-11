@@ -1,0 +1,17 @@
+Restored flags: ['--optim', 'SGD', '--lr', '0.0001', '--lrStep', '50', '--lrGamma', '0.5', '--weightDecay', '0.001', '--momentum', '0.9', '--seed', '123', '--runsPath', './data/runs', '--savePath', './data/runs/seqnet_Mar11_02-02-13_l10_w5/checkpoints', '--patience', '0', '--pooling', 'seqnet', '--w', '5', '--outDims', '4096', '--margin', '0.1']
+Namespace(mode='test', batchSize=16, cacheBatchSize=24, cacheRefreshRate=0, nEpochs=200, start_epoch=0, nGPU=1, optim='SGD', lr=0.0001, lrStep=50.0, lrGamma=0.5, weightDecay=0.001, momentum=0.9, nocuda=False, threads=8, seed=123, expName='0', skip='1', runsPath='./data/runs', savePath='./data/runs/seqnet_Mar11_02-02-13_l10_w5/checkpoints', cachePath='./data/cache', resultsPath=None, resume='./data/runs/seqnet_Mar11_02-02-13_l10_w5/', ckpt='latest', evalEvery=1, patience=0, split='test', numSamples2Project=-1, extractOnly=False, predictionsFile=None, seqL_filterData=None, dataset='nordland-sf', msls_trainCity='melbourne', msls_valCity='austin', pooling='seqnet', seqL=5, w=5, outDims=4096, margin=0.1, descType='netvlad-pytorch')
+===> Loading dataset(s)
+Here
+All Db descs:  (27592, 4096)
+All Qry descs:  (27592, 4096)
+Traceback (most recent call last):
+  File "/home/yl9727/seqNet/main.py", line 123, in <module>
+    whole_train_set, whole_training_data_loader, train_set, whole_test_set = get_splits(opt, dataset)
+                                                                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yl9727/seqNet/get_datasets.py", line 96, in get_splits
+    whole_test_set = dataset.get_whole_test_set()
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yl9727/seqNet/datasets.py", line 79, in get_whole_test_set
+    seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
+                                                          ^^^
+NameError: name 'opt' is not defined. Did you mean: 'oct'?

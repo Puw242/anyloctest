@@ -93,7 +93,7 @@ def get_splits(opt, dataset):
         print('===> Evaluating on val set, query count:', whole_test_set.dbStruct.numQ)
     elif opt.mode.lower() == 'test':
         if opt.split.lower() == 'test':
-            whole_test_set = dataset.get_whole_test_set()
+            whole_test_set = dataset.get_whole_test_set(opt=opt)
             print('===> Evaluating on test set')
         elif opt.split.lower() == 'train':
             whole_test_set = dataset.get_whole_training_set(opt=opt)
