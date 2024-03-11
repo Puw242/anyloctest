@@ -116,7 +116,6 @@ class cosine_al_seqNet(nn.Module):
             output[idx] = al_x
 
         x = output
-
         
         x = x.permute(0,2,1) #[24, 4096, 10]
         mean_pool = nn.AdaptiveAvgPool1d(1)
@@ -124,6 +123,70 @@ class cosine_al_seqNet(nn.Module):
         x = x.squeeze(-1)
 
         return x
+
+
+class multi_al_seqNet(nn.Module):
+    def __init__(self, inDims, outDims, seqL, w=5, num_heads=8):
+
+        super(multi_al_seqNet, self).__init__()
+        self.inDims = inDims
+        self.self_attention_layer = MultiHeadSelfAttention(4096, num_heads)
+        self.w = w
+        self.conv = nn.Conv1d(inDims, outDims, kernel_size=self.w)
+
+    def forward(self, x):
+        if len(x.shape) < 3:
+            x = x.unsqueeze(1)
+
+        # Create a new tensor for storing output to avoid inplace modification.
+        output = torch.zeros_like(x)
+        for idx in range(len(x)):
+            al_x = x[idx]
+            al_x = self.self_attention_layer(al_x).permute(0,2,1)
+            al_x = al_x.squeeze(-1)
+            output[idx] = al_x
+
+        x = output
+        
+        x = x.permute(0,2,1) #[24, 4096, 10]
+        mean_pool = nn.AdaptiveAvgPool1d(1)
+        x = mean_pool(x)
+        x = x.squeeze(-1)
+
+        return x
+
+
+
+class MultiHeadSelfAttention(nn.Module):
+    def __init__(self, input_dim, num_heads):
+        super(MultiHeadSelfAttention, self).__init__()
+        assert input_dim % num_heads == 0, "input_dim must be divisible by num_heads"
+
+        self.num_heads = num_heads
+        self.dim_per_head = input_dim // num_heads
+
+        self.query_linear = nn.Linear(input_dim, input_dim)
+        self.key_linear = nn.Linear(input_dim, input_dim)
+        self.value_linear = nn.Linear(input_dim, input_dim)
+
+        self.final_linear = nn.Linear(input_dim, input_dim)
+
+    def forward(self, sequence):
+        batch_size = sequence.shape[0]
+
+        # Transform to (batch_size, num_heads, seq_len, dim_per_head)
+        query = self.query_linear(sequence).view(batch_size, -1, self.num_heads, self.dim_per_head).transpose(1, 2)
+        key = self.key_linear(sequence).view(batch_size, -1, self.num_heads, self.dim_per_head).transpose(1, 2)
+        value = self.value_linear(sequence).view(batch_size, -1, self.num_heads, self.dim_per_head).transpose(1, 2)
+
+        # Compute attention scores
+        attention_scores = torch.matmul(query, key.transpose(-2, -1)) / (self.dim_per_head ** 0.5)
+        attention_weights = F.softmax(attention_scores, dim=-1)
+        attended_sequence = torch.matmul(attention_weights, value)
+
+        # Concatenate heads and put through final linear layer
+        attended_sequence = attended_sequence.transpose(1, 2).contiguous().view(batch_size, -1, self.num_heads * self.dim_per_head)
+        return self.final_linear(attended_sequence)
 
 
 class SelfAttentionLayer(nn.Module):

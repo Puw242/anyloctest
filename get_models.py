@@ -37,6 +37,9 @@ def get_model(opt,encoder_dim,device):
     elif opt.pooling.lower() == 'al_seqnet':
         seqFt = seqNet.al_seqNet(encoder_dim, opt.outDims, opt.seqL, opt.w)
         model.add_module('pool', nn.Sequential(*[seqFt, Flatten(), L2Norm()]))
+    elif opt.pooling.lower() == 'multi_al_seqnet':
+        seqFt = seqNet.multi_al_seqNet(encoder_dim, opt.outDims, opt.seqL, opt.w)
+        model.add_module('pool', nn.Sequential(*[seqFt, Flatten(), L2Norm()]))
     elif opt.pooling.lower() == 'cosine_al_seqnet':
         seqFt = seqNet.cosine_al_seqNet(encoder_dim, opt.outDims, opt.seqL, opt.w)
         model.add_module('pool', nn.Sequential(*[seqFt, Flatten(), L2Norm()]))
