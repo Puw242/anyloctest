@@ -232,13 +232,14 @@ def print_db_concise(db):
 class WholeDatasetFromStruct(data.Dataset):
     def __init__(self, structFile, indsSplit, dbDescs, qDescs, skip_rate, onlyDB=False, seqL=1, seqBounds=None,seqL_filterData=None):
         super().__init__()
+        self.indsSplit = indsSplit
         self.skip_rate = skip_rate
         self.seqL = seqL
         self.filterBoundaryInds = False if seqL_filterData is None else True
 
         self.dbStruct = parse_db_struct(structFile)
 
-        self.images = dbDescs[indsSplit[0]]
+        self.images = dbDescs[indsSplit[0]] # gets the descriptors of the database with adjusted skip rate
 
         if seqBounds[0] is None:
             self.seqBounds = np.array([[0,len(self.images)] for _ in range(len(self.images))])                                                    
@@ -254,9 +255,21 @@ class WholeDatasetFromStruct(data.Dataset):
             q_seqBounds = db_seqBounds[-1,-1] + seqBounds[1][indsSplit[1]]
             self.seqBounds = np.vstack([db_seqBounds,q_seqBounds])
 
-        self.validInds = np.arange(len(self.images)) // self.skip_rate
+        self.validInds = np.arange(len(self.images))
         self.validInds_db = np.arange(self.dbStruct.numDb) // self.skip_rate
         self.validInds_q = np.arange(self.dbStruct.numQ) // self.skip_rate
+
+        """
+        For testing:
+
+        print("validInds: ",self.validInds)
+        print("validInds_db: ",self.validInds_db)
+        print("validInds_q: ",self.validInds_q)
+
+        print("validInds: ",len(self.validInds))
+        print("validInds_db: ",len(self.validInds_db))
+        print("validInds_q: ",len(self.validInds_q))
+        """
 
 
         if self.filterBoundaryInds:
@@ -329,11 +342,17 @@ class QueryDatasetFromStruct(data.Dataset):
         # potential positives are those within nontrivial threshold range
         # fit NN to find them, search by radius
         knn = NearestNeighbors(n_jobs=-1)
-        knn.fit(self.dbStruct.utmDb)
+
+        self.skip_rated_utmDb = self.dbStruct.utmDb[::skip_rate] # TODO: Is this correct?
+
+        # print("self.dbStruct.utmDb: ",self.skip_rated_utmDb) # NOTE: For testing
+        # print(type(self.dbStruct.utmDb)) # NOTE: For testing
+        
+        knn.fit(self.skip_rated_utmDb) #changed
 
         # TODO use sqeuclidean as metric?
         self.nontrivial_distances, self.nontrivial_positives = \
-            knn.radius_neighbors(self.dbStruct.utmQ, radius=self.dbStruct.nonTrivPosDistSqThr**0.5,
+            knn.radius_neighbors(self.skip_rated_utmDb, radius=self.dbStruct.nonTrivPosDistSqThr**0.5,
                                  return_distance=True)
 
 
@@ -388,10 +407,10 @@ class QueryDatasetFromStruct(data.Dataset):
                 # if none are violating then skip this query
                 return None
             dPos = dPos[0][-1].item()
+            # print("non_trivial_positives: ",self.nontrivial_positives[-1])
             posIndex = self.nontrivial_positives[index][posNN[0,-1]].item()
-
             negSample = np.random.choice(self.potential_negatives[index], self.nNegSample)
-            negSample = np.unique(np.concatenate([self.negCache[index], negSample]))
+            negSample = np.unique(np.concatenate([self.negCache[index], negSample])) #makes sure its unique
             negSample = np.sort(negSample) #essential to order ascending, speeds up h5 by about double
             negSample = negSample // self.skip_rate
             negSample = np.unique(negSample)
@@ -425,7 +444,10 @@ class QueryDatasetFromStruct(data.Dataset):
             self.negCache[index] = negIndices
 
         sIdMin_q, sIdMax_q = self.q_seqBounds[index]
-        query = self.qDescs[getSeqInds(index,self.seqL,sIdMax_q,sIdMin_q)]
+        query = self.qDescs[getSeqInds(index,self.seqL,sIdMax_q,sIdMin_q)]  
+
+        # print(f"index: {index}, posIndex: {posIndex}") # NOTE: Testing
+
         sIdMin_p, sIdMax_p = self.db_seqBounds[posIndex]
         positive = self.dbDescs[getSeqInds(posIndex,self.seqL,sIdMax_p,sIdMin_p)]
 

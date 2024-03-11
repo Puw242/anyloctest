@@ -15,17 +15,18 @@ def get_dataset(opt):
             ref, qry = 'summer', 'winter'
         elif 'sf' in opt.dataset.lower():
             ref, qry = 'spring', 'fall'
-        ft1 = np.load(join(prefix_data,"descData/{}/nordland-clean-{}.npy".format(opt.descType,ref)))
-        ft2 = np.load(join(prefix_data,"descData/{}/nordland-clean-{}.npy".format(opt.descType,qry)))
 
         skip_rate = int(opt.skip.lower())
 
-        
+        # ft1,ft2 are the data files
+        ft1 = np.load(join(prefix_data,"descData/{}/nordland-clean-{}.npy".format(opt.descType,ref))) 
+        ft2 = np.load(join(prefix_data,"descData/{}/nordland-clean-{}.npy".format(opt.descType,qry))) 
+
         trainInds = np.arange(0, 15000, skip_rate)  
         testInds = np.arange(15100, 18100, skip_rate) 
         valInds = np.arange(18200, 21200, skip_rate) 
 
-
+        # modify dataset indicies based on skip_rate
         dataset.trainInds = [trainInds, trainInds]
         dataset.valInds = [valInds, valInds]
         dataset.testInds = [testInds, testInds]

@@ -12,19 +12,16 @@ def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_
     epoch_loss = 0
     startIter = 1 # keep track of batch iter across subsets for logging
 
-    skip_rate = int(opt.skip.lower()) # Skip rate from options
 
     if opt.cacheRefreshRate > 0:
-        """
-        Check this!
-        """
         subsetN = ceil(len(train_set) / opt.cacheRefreshRate)
-        start_indices = np.arange(0, len(train_set), opt.cacheRefreshRate * skip_rate)
+        start_indices = np.arange(0, len(train_set), opt.cacheRefreshRate)
         #TODO randomise the arange before splitting?
         subsetIdx = [start_indices[i:i+1] for i in range(len(start_indices))]
     else:
         subsetN = 1
-        subsetIdx = [np.arange(len(train_set)) * int(opt.skip.lower())]
+        subsetIdx = [np.arange(len(train_set))]
+
 
     nBatches = (len(train_set) + opt.batchSize - 1) // opt.batchSize
 
@@ -37,20 +34,18 @@ def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_
             pool_size = encoder_dim
             if opt.pooling.lower() == 'seqnet':
                 pool_size = opt.outDims
-            h5feat = h5.create_dataset("features", [len(whole_train_set), pool_size], dtype=np.float32)
+            h5feat = h5.create_dataset("features", [len(whole_train_set), pool_size], dtype=np.float32) # empty creation of a dataset
             with torch.no_grad():
                 for iteration, (input, indices) in tqdm(enumerate(whole_training_data_loader, 1),total=len(whole_training_data_loader)-1, leave=False):
-                    indices = indices * skip_rate
+                    #print("indices in h5: ", indices)
                     image_encoding = (input).float().to(device)
                     seq_encoding = model.pool(image_encoding)
-                    h5feat[indices.detach().numpy() // skip_rate, :] = seq_encoding.detach().cpu().numpy() # Fix this line, adjusted to divide indices by the skip rate
+                    h5feat[indices.detach().numpy(), :] = seq_encoding.detach().cpu().numpy()
                     del input, image_encoding, seq_encoding
 
         subset_indices = np.array(subsetIdx[subIter])
-
-        adjusted_indices = subset_indices // skip_rate
-
-        sub_train_set = Subset(dataset=train_set, indices=adjusted_indices)
+        sub_train_set = Subset(dataset=train_set, indices=subset_indices)
+        print(subset_indices)
 
 
         training_data_loader = DataLoader(dataset=sub_train_set, num_workers=opt.threads, 
@@ -64,7 +59,7 @@ def train(opt, model, encoder_dim, device, dataset, criterion, optimizer, train_
         for iteration, (query, positives, negatives, 
                 negCounts, indices) in tqdm(enumerate(training_data_loader, startIter),total=len(training_data_loader),leave=False):
             loss = 0
-            
+
             if query is None:
                 continue # in case we get an empty batch
 

@@ -92,7 +92,8 @@ def test(opt, model, encoder_dim, device, eval_set, writer, epoch=0, extract_noE
     # extracted for both db and query, now split in own sets
     # print("eval_set.dbStruct.numDb: ",eval_set.dbStruct.numDb)
 
-    qFeat = dbFeat[eval_set.dbStruct.numDb // int(opt.skip.lower()):]
+    # Divided by sampling rate to reflect skip_rate
+    qFeat = dbFeat[eval_set.dbStruct.numDb // int(opt.skip.lower()):] 
     dbFeat = dbFeat[:eval_set.dbStruct.numDb // int(opt.skip.lower())]
 
     print(dbFeat.shape, qFeat.shape)
