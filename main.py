@@ -61,7 +61,7 @@ parser.add_argument('--dataset', type=str, default='nordland-sw', help='Dataset 
 parser.add_argument('--msls_trainCity', type=str, default='melbourne', help='trainCityName')
 parser.add_argument('--msls_valCity', type=str, default='austin', help='valCityName')
 parser.add_argument('--pooling', type=str, default='seqnet', help='type of pooling to use', choices=[ 'cosine_seqnet','seqnet', 'smooth', 'delta', 'single','single+seqmatch', 
-                                                                                                    's1+seqmatch','al_seqnet','cosine_al_seqnet','multi_al_seqnet'])
+                                                                                                    's1+seqmatch','al_seqnet','cosine_al_seqnet','multi_al_seqnet','seqnet_al'])
 parser.add_argument('--seqL', type=int, default=5, help='Sequence Length')
 parser.add_argument('--w', type=int, default=3, help='filter size for seqNet')
 parser.add_argument('--outDims', type=int, default=None, help='Output descriptor dimensions')

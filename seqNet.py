@@ -19,8 +19,8 @@ class seqNet(nn.Module):
 
         x = x.permute(0,2,1) # from [B,T,C] to [B,C,T]
         seqFt = self.conv(x)
+        print("after conv shape: ",seqFt.shape)
         seqFt = torch.mean(seqFt,-1)
-        # print("sequence feature shape",seqFt.shape)
         return seqFt
         
 
@@ -43,14 +43,11 @@ class cosine_seqNet(nn.Module):
             #print("cosine_sim_x shape after slice: ",cosine_sim_x.shape)
             cosine_sim_x = cosine_sim(cosine_sim_x)
             x[idx] = cosine_sim_x
-        # print("x[0] after, ",x[0])
     
         x = x.permute(0,2,1) 
-        # print("x before conv: ",x.shape)
         x = self.conv(x)
         
         x = torch.mean(x,-1)
-        # print("after and mean conv: ",x.shape)
         return x
 
 
@@ -81,12 +78,50 @@ class al_seqNet(nn.Module):
 
         x = output
 
-
         x = x.permute(0,2,1) # shape: [24,4096,10]
         mean_pool = nn.AdaptiveAvgPool1d(1)
         x = mean_pool(x)
         x = x.squeeze(-1)
         return x
+
+
+# Attention Layer Seqnet
+class seqNet_al(nn.Module):
+    def __init__(self, inDims, outDims, seqL, w=5):
+
+        super(seqNet_al, self).__init__()
+        self.inDims = inDims
+        self.self_attention_layer = SelfAttentionLayer(4096)
+        self.w = w
+        self.conv = nn.Conv1d(inDims, outDims, kernel_size=self.w)
+
+    def forward(self, x):
+
+        if len(x.shape) < 3:
+            x = x.unsqueeze(1) # convert [B,C] to [B,1,C]
+        
+        # print(x.shape)
+        x = x.permute(0,2,1) # from [B,T,C] to [B,C,T]
+        x = self.conv(x)
+
+        # print("after conv: ",x.shape)
+
+        x = x.permute(0,2,1)
+        # print("permute again: ",x.shape)
+
+        output = torch.zeros_like(x)
+        for idx in range(len(x)):
+            al_x = x[idx]
+            al_x = self.self_attention_layer(al_x)
+            output[idx] = al_x
+
+        x = output
+        x = x.permute(0,2,1) # shape: [24,4096,x]
+        mean_pool = nn.AdaptiveAvgPool1d(1)
+        x = mean_pool(x)
+        x = x.squeeze(-1)
+        return x
+
 
 
 class cosine_al_seqNet(nn.Module):
@@ -197,13 +232,17 @@ class SelfAttentionLayer(nn.Module):
         self.value_linear = nn.Linear(input_dim, input_dim)
         
     def forward(self, sequence):
+        # print("sequence: ",sequence.shape)
         query = self.query_linear(sequence)
         key = self.key_linear(sequence)
         value = self.value_linear(sequence)
         
         attention_scores = torch.matmul(query, key.transpose(-2, -1))
+
         attention_weights = torch.softmax(attention_scores, dim=-1) #potentially not use softmax maybe we use something like first order norm instead
+        
         attended_sequence = torch.matmul(attention_weights, value)
+
         return attended_sequence
 
 
