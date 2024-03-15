@@ -165,29 +165,39 @@ class multi_al_seqNet(nn.Module):
 
         super(multi_al_seqNet, self).__init__()
         self.inDims = inDims
-        self.self_attention_layer = MultiHeadSelfAttention(4096, num_heads)
+        self.first_self_attention_layer = SelfAttentionLayer(4096)
+        self.second_self_attention_layer = SelfAttentionLayer(4096)
         self.w = w
-        self.conv = nn.Conv1d(inDims, outDims, kernel_size=self.w)
+        self.first_conv = nn.Conv1d(inDims, outDims, kernel_size=3)
+        self.second_conv = nn.Conv1d(inDims, outDims, kernel_size=3)
 
     def forward(self, x):
         if len(x.shape) < 3:
-            x = x.unsqueeze(1)
-
-        # Create a new tensor for storing output to avoid inplace modification.
-        output = torch.zeros_like(x)
-        for idx in range(len(x)):
-            al_x = x[idx]
-            al_x = self.self_attention_layer(al_x).permute(0,2,1)
-            al_x = al_x.squeeze(-1)
-            output[idx] = al_x
-
-        x = output
+            x = x.unsqueeze(1) # convert [B,C] to [B,1,C]
         
-        x = x.permute(0,2,1) #[24, 4096, 10]
+        conv_layers = [self.first_conv, self.second_conv]
+        attention_layers = [self.first_self_attention_layer, self.second_self_attention_layer]
+
+        for i in range(2):  # Looping twice
+            x = x.permute(0, 2, 1)  # from [B, T, C] to [B, C, T]
+            x = conv_layers[i](x)  # Apply conv layer
+            print(f"after {i} conv: ", x.shape)
+
+            x = x.permute(0, 2, 1)  # Permute back to [B, T, C]
+            # print("permute again: ", x.shape)
+
+            output = torch.zeros_like(x)
+            for idx in range(len(x)):
+                al_x = x[idx]  # Getting the individual example in the batch
+                al_x = attention_layers[i](al_x)  # Apply self-attention layer, adding batch dim
+                output[idx] = al_x.squeeze(0)  # Remove batch dim added earlier
+
+            x = output
+
+        x = x.permute(0,2,1) # shape: [24,4096,x]
         mean_pool = nn.AdaptiveAvgPool1d(1)
         x = mean_pool(x)
         x = x.squeeze(-1)
-
         return x
 
 
