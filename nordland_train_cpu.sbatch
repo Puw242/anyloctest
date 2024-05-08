@@ -13,4 +13,4 @@ module purge
 singularity exec --nv \
 	    --overlay /scratch/yl9727/my_env/overlay-15GB-500K.ext3:ro \
 	    /scratch/work/public/singularity/cuda11.6.124-cudnn8.4.0.27-devel-ubuntu20.04.4.sif\
-	    /bin/bash -c "source /ext3/env.sh; python main.py --mode train --pooling seqnet --dataset nordland-sw --seqL 1 --w 1 --outDims 4096 --expName "w5""
+	    /bin/bash -c "source /ext3/env.sh; python main.py --mode train --pooling seqnet --dataset nordland-sw --seqL 1 --w 1 --outDims 4096 --expName "w5" --nocuda"

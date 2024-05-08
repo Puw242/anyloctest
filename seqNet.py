@@ -181,7 +181,7 @@ class multi_al_seqNet(nn.Module):
         for i in range(2):  # Looping twice
             x = x.permute(0, 2, 1)  # from [B, T, C] to [B, C, T]
             x = conv_layers[i](x)  # Apply conv layer
-            print(f"after {i} conv: ", x.shape)
+            # print(f"after {i} conv: ", x.shape)
 
             x = x.permute(0, 2, 1)  # Permute back to [B, T, C]
             # print("permute again: ", x.shape)
