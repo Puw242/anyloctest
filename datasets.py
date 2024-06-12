@@ -18,14 +18,14 @@ dbStruct = namedtuple('dbStruct', ['whichSet', 'dataset',
                                    'dbTimeStamp', 'qTimeStamp', 'gpsDb', 'gpsQ'])
 
 class Dataset():
-    def __init__(self, dataset_name, train_mat_file, test_mat_file, val_mat_file, opt):
+    def __init__(self, dataset_name, train_mat_file, test_mat_file, val_mat_file):
         self.dataset_name = dataset_name
         self.train_mat_file = train_mat_file
         self.test_mat_file = test_mat_file
         self.val_mat_file = val_mat_file
         self.struct_dir = "./structFiles/"
-        self.seqL = opt.seqL
-        self.seqL_filterData = opt.seqL_filterData
+        self.seqL = 1
+        self.seqL_filterData = 0
 
         # descriptor settings
         self.dbDescs = None
@@ -55,7 +55,7 @@ class Dataset():
         return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
         self.qDescs, seqL=self.seqL,onlyDB=onlyDB, 
         seqBounds=[self.db_seqBounds,self.q_seqBounds],
-        seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
+        seqL_filterData=self.seqL_filterData, skip_rate = 1)
 
     def get_whole_val_set(self,opt):
         structFile = join(self.struct_dir, self.val_mat_file)
@@ -64,7 +64,7 @@ class Dataset():
             self.seqL_filterData = self.seqL
         return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
         self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds],
-        seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
+        seqL_filterData=self.seqL_filterData, skip_rate = 1)
 
     def get_whole_test_set(self,opt):
         if self.test_mat_file is not None:
@@ -76,7 +76,7 @@ class Dataset():
                 self.seqL_filterData = self.seqL
             return WholeDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
         self.qDescs, seqL=self.seqL, seqBounds=[self.db_seqBounds,self.q_seqBounds],
-        seqL_filterData=self.seqL_filterData, skip_rate = int(opt.skip.lower()))
+        seqL_filterData=self.seqL_filterData, skip_rate = 1)
 
         else:
             raise ValueError('test set not available for dataset ' + self.dataset_name)
@@ -86,14 +86,14 @@ class Dataset():
         indsSplit = self.trainInds
         return QueryDatasetFromStruct(structFile,indsSplit, self.dbDescs,  
         self.qDescs, nNegSample=nNegSample, margin=margin,use_regions=use_regions, seqL=self.seqL, 
-        seqBounds=[self.db_seqBounds,self.q_seqBounds], skip_rate = int(opt.skip.lower()))
+        seqBounds=[self.db_seqBounds,self.q_seqBounds], skip_rate = 1)
 
     def get_val_query_set(self):
         structFile = join(self.struct_dir, self.val_mat_file)
         indsSplit = self.valInds
         return QueryDatasetFromStruct(structFile, indsSplit, self.dbDescs, 
         self.qDescs, seqL=self.seqL, 
-        seqBounds=[self.db_seqBounds,self.q_seqBounds],skip_rate = int(opt.skip.lower()))
+        seqBounds=[self.db_seqBounds,self.q_seqBounds],skip_rate = 1)
 
     @staticmethod
     def collate_fn(batch):
